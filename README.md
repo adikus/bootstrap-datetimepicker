@@ -1,5 +1,3 @@
-##This is project is not currently being maintained
+##Bootstrap Datetimepicker for Appivia.com
 
-Forked from http://www.eyecon.ro/bootstrap-datepicker/
-
-See documentation [here](http://tarruda.github.com/bootstrap-datetimepicker/).
+Forked from http://github.com/tarruda/bootstrap-datetimepicker
