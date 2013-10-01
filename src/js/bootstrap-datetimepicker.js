@@ -333,7 +333,7 @@
                               tmp.getHours(),
                               Math.round(tmp.getMinutes()/this.options.minuteInterval)*this.options.minuteInterval,
                               tmp.getSeconds(),
-                              (this.options.pickSeconds ? tmp.getMilliseconds() : 0))
+                              tmp.getMilliseconds())
         }
       }
       this.viewDate = UTCDate(this._date.getUTCFullYear(), this._date.getUTCMonth(), 1, 0, 0, 0, 0);
