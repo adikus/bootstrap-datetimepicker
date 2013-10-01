@@ -6,13 +6,8 @@
      href="../build/css/bootstrap-datetimepicker.min.css">
   </head>
   <body>
-      <div class="text-center" style="width:800px;margin: 100px auto 0;">
-          <div id="datetimepicker" class="input-append date">
-              <input type="text" />
-              <span class="add-on">
-                <i data-time-icon="icon-time" data-date-icon="icon-calendar"></i>
-              </span>
-          </div>
+      <div class="text-center">
+          <input type="text" name="datetimepicker" id="datetimepicker"/>
       </div>
 
     <script type="text/javascript"
@@ -26,11 +21,25 @@
     </script>
     <script type="text/javascript">
       $('#datetimepicker').datetimepicker({
+        startDate: new Date(),
         format: 'dd/MM/yyyy hh:mm:ss',
-        joint: true,
+        collapse: false,
         inline: true,
+        pickSeconds: false,
+        pick12HourFormat: true,
         selectTime: false,
-        selectMonth: false
+        selectMonth: false,
+        minuteInterval: 5,
+        timeZonePicker: {
+            options: [
+                [-8,'(GMT-08:00) Pacific Time (US & Canada)'],
+                [-7,'(GMT-07:00) Mountain Time (US & Canada)'],
+                [-6,'(GMT-06:00) Central Time (US & Canada)']
+            ],
+            selected: '-6',
+            name: 'timezone',
+            id: 'timezone'
+        }
       });
     </script>
   </body>

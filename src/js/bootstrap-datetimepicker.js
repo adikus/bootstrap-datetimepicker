@@ -78,7 +78,7 @@
         icon.removeClass(this.timeIcon);
         icon.addClass(this.dateIcon);
       }
-      this.widget = $(getTemplate(this.timeIcon, options.pickDate, options.pickTime, options.pick12HourFormat, options.pickSeconds, options.collapse, options.joint, options.inline, options.selectTime, options.selectMonth));
+      this.widget = $(getTemplate(this.timeIcon, options.pickDate, options.pickTime, options.pick12HourFormat, options.pickSeconds, options.collapse, options.inline, options.selectTime, options.selectMonth, options.timeZonePicker));
       if(this.options.inline){
           this.$element.after(this.widget);
           this.$element.hide();
@@ -173,7 +173,7 @@
 
     set: function() {
       var formatted = '';
-      if (!this._unset) formatted = this.formatDate(this._date);
+      if (!this._unset) formatted = this.formatDate(this._date, this.options.pickSeconds);
       if (!this.isInput) {
         if (this.component){
           var input = this.$element.find('input');
@@ -326,14 +326,14 @@
           this._date = this.parseDate(dateStr);
         }
         if (!this._date) {
-          var tmp = new Date()
+          var tmp = new Date();
           this._date = UTCDate(tmp.getFullYear(),
                               tmp.getMonth(),
                               tmp.getDate(),
                               tmp.getHours(),
-                              tmp.getMinutes(),
+                              Math.round(tmp.getMinutes()/this.options.minuteInterval)*this.options.minuteInterval,
                               tmp.getSeconds(),
-                              tmp.getMilliseconds())
+                              (this.options.pickSeconds ? tmp.getMilliseconds() : 0))
         }
       }
       this.viewDate = UTCDate(this._date.getUTCFullYear(), this._date.getUTCMonth(), 1, 0, 0, 0, 0);
@@ -650,7 +650,7 @@
       },
 
       incrementMinutes: function(e) {
-        this._date.setUTCMinutes(this._date.getUTCMinutes() + 1);
+        this._date.setUTCMinutes(this._date.getUTCMinutes() + this.options.minuteInterval);
       },
 
       incrementSeconds: function(e) {
@@ -662,7 +662,7 @@
       },
 
       decrementMinutes: function(e) {
-        this._date.setUTCMinutes(this._date.getUTCMinutes() - 1);
+        this._date.setUTCMinutes(this._date.getUTCMinutes() - this.options.minuteInterval);
       },
 
       decrementSeconds: function(e) {
@@ -743,8 +743,10 @@
     },
 
     stopEvent: function(e) {
-      e.stopPropagation();
-      e.preventDefault();
+      if(e.target.nodeName.toLowerCase() != 'select'){
+          e.stopPropagation();
+          e.preventDefault();
+      }
     },
 
     // part of the following code was taken from
@@ -846,7 +848,7 @@
       this.component.removeData('datetimepicker');
     },
 
-    formatDate: function(d) {
+    formatDate: function(d, seconds) {
       return this.format.replace(formatReplacer, function(match) {
         var methodName, property, rv, len = match.length;
         if (match === 'ms')
@@ -859,10 +861,12 @@
         } else if (property === 'Period12') {
           if (d.getUTCHours() >= 12) return 'PM';
           else return 'AM';
-	} else if (property === 'UTCYear') {
+	    } else if (property === 'UTCYear') {
           rv = d.getUTCFullYear();
           rv = rv.toString().substr(2);   
-        } else {
+        } else if(property === 'UTCSeconds') {
+          rv = seconds ? d.getUTCSeconds() : 0;
+        }else {
           methodName = 'get' + property;
           rv = d[methodName]();
         }
@@ -1108,10 +1112,11 @@
     startDate: -Infinity,
     endDate: Infinity,
     collapse: true,
-    joint: false,
     inline: false,
     selectTime: true,
-    selectMonth: true
+    selectMonth: true,
+    minuteInterval: 1,
+    timeZonePicker: false
   };
   $.fn.datetimepicker.Constructor = DateTimePicker;
   var dpgId = 0;
@@ -1160,20 +1165,20 @@
     else return Array(l - s.length + 1).join(c || ' ') + s;
   }
 
-  function getTemplate(timeIcon, pickDate, pickTime, is12Hours, showSeconds, collapse, joint, inline, selectTime, selectMonth) {
+  function getTemplate(timeIcon, pickDate, pickTime, is12Hours, showSeconds, collapse, inline, selectTime, selectMonth, timeZonePicker) {
     if (pickDate && pickTime) {
       return (
-        '<div class="bootstrap-datetimepicker-widget '+ (inline ? 'bootstrap-datetimepicker-joint ' : 'dropdown-menu ') + (inline ? 'bootstrap-datetimepicker-inline' : '') + '">' +
+        '<div class="bootstrap-datetimepicker-widget '+ (inline ? 'bootstrap-datetimepicker-inline ' : 'dropdown-menu ') + (inline ? 'bootstrap-datetimepicker-inline' : '') + '">' +
           '<ul>' +
-            '<li' + (collapse && !joint ? ' class="collapse in"' : '') + '>' +
+            '<li' + (collapse ? ' class="collapse in"' : '') + '>' +
               '<div class="datepicker' + (selectMonth ? ' datepicker-month-select' : '') + '">' +
                 DPGlobal.template +
               '</div>' +
             '</li>' +
-            (joint ? '' : '<li class="picker-switch accordion-toggle"><a><i class="' + timeIcon + '"></i></a></li>') +
-            '<li' + (collapse && !joint ? ' class="collapse"' : '') + '>' +
+            '<li class="picker-switch accordion-toggle"><a><i class="' + timeIcon + '"></i></a></li>' +
+            '<li' + (collapse? ' class="collapse"' : '') + '>' +
               '<div class="timepicker">' +
-                TPGlobal.getTemplate(is12Hours, showSeconds, selectTime) +
+                TPGlobal.getTemplate(is12Hours, showSeconds, selectTime, timeZonePicker) +
               '</div>' +
             '</li>' +
           '</ul>' +
@@ -1181,15 +1186,15 @@
       );
     } else if (pickTime) {
       return (
-        '<div class="bootstrap-datetimepicker-widget '+ (inline ? 'bootstrap-datetimepicker-joint' : 'dropdown-menu') + '">' +
+        '<div class="bootstrap-datetimepicker-widget '+ (inline ? 'bootstrap-datetimepicker-inline' : 'dropdown-menu') + '">' +
           '<div class="timepicker">' +
-            TPGlobal.getTemplate(is12Hours, showSeconds) +
+            TPGlobal.getTemplate(is12Hours, showSeconds, selectTime, timeZonePicker) +
           '</div>' +
         '</div>'
       );
     } else {
       return (
-        '<div class="bootstrap-datetimepicker-widget '+ (inline ? 'bootstrap-datetimepicker-joint' : 'dropdown-menu') + '">' +
+        '<div class="bootstrap-datetimepicker-widget '+ (inline ? 'bootstrap-datetimepicker-inline' : 'dropdown-menu') + '">' +
           '<div class="datepicker">' +
             DPGlobal.template +
           '</div>' +
@@ -1259,7 +1264,7 @@
     minuteTemplate: '<span data-action="showMinutes" data-time-component="minutes" class="timepicker-minute"></span>',
     secondTemplate: '<span data-action="showSeconds" data-time-component="seconds" class="timepicker-second"></span>'
   };
-  TPGlobal.getTemplate = function(is12Hours, showSeconds, selectTime) {
+  TPGlobal.getTemplate = function(is12Hours, showSeconds, selectTime, timeZonePicker) {
     return (
     '<div class="timepicker-picker">' +
       '<table class="table-condensed"' +
@@ -1272,7 +1277,7 @@
           (showSeconds ?
           '<td class="separator"></td>' +
           '<td><a href="#" class="btn" data-action="incrementSeconds"><i class="icon-chevron-up"></i></a></td>': '')+
-          (is12Hours ? '<td class="separator"></td>' : '') +
+          (is12Hours ? '<td class="separator"></td>' + '<td>&nbsp</td>' : '') +
         '</tr>' +
         '<tr'+ (selectTime ? ' class="timepicker-select"' : '') +'>' +
           '<td>' + TPGlobal.hourTemplate + '</td> ' +
@@ -1283,7 +1288,7 @@
           '<td>' + TPGlobal.secondTemplate + '</td>' : '') +
           (is12Hours ?
           '<td class="separator"></td>' +
-          '<td>' +
+          '<td class="toggle-period">' +
           '<button type="button" class="btn btn-primary" data-action="togglePeriod"></button>' +
           '</td>' : '') +
         '</tr>' +
@@ -1294,10 +1299,12 @@
           (showSeconds ?
           '<td class="separator"></td>' +
           '<td><a href="#" class="btn" data-action="decrementSeconds"><i class="icon-chevron-down"></i></a></td>': '') +
-          (is12Hours ? '<td class="separator"></td>' : '') +
+          (is12Hours ? '<td class="separator"></td>' + '<td>&nbsp</td>' : '') +
+          //(timeZonePicker ? '<td class="separator"></td><td>'+TPGlobal.getTimeZonePickerTemplate(timeZonePicker)+'</td>' : '') +
         '</tr>' +
       '</table>' +
     '</div>' +
+    '<div class="timepicker-time-zone">'+TPGlobal.getTimeZonePickerTemplate(timeZonePicker)+'</div>' +
     '<div class="timepicker-hours" data-action="selectHour">' +
       '<table class="table-condensed">' +
       '</table>'+
@@ -1311,6 +1318,17 @@
       '<table class="table-condensed">' +
       '</table>'+
     '</div>': '')
+    );
+  }
+  TPGlobal.getTimeZonePickerTemplate = function(timeZonePicker) {
+    var options = '';
+    for(var i = 0; i < timeZonePicker.options.length; i++){
+        options += '<option value=""'+timeZonePicker.options[i][0]+'"' +
+        (timeZonePicker.options[i][0] == timeZonePicker.selected ? ' selected="selected"' : '') +
+        '>'+timeZonePicker.options[i][1]+'</option>';
+    }
+    return (
+        '<select name=""'+timeZonePicker.name+'" id="'+timeZonePicker.id+'"'+(timeZonePicker.class ? ' class="'+timeZonePicker.class+'"' : '')+'>'+options+'</select>'
     );
   }
 
